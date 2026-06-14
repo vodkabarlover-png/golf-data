@@ -20,24 +20,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Fetch PGA leaderboard from TheScore
+              - name: Debug curl output
         run: |
-          curl -s "https://api.thescore.com/golf/pga/events" > events.json
+          echo "=== CURL OUTPUT START ==="
+          curl -v https://api.thescore.com/golf/pga/events || true
+          echo "=== CURL OUTPUT END ==="
 
-          event_id=$(jq -r '[.[] | select(.is_live == true)][0].id' events.json)
-
-          curl -s "https://api.thescore.com/golf/pga/events/$event_id" > event.json
-
-          jq '{
-            status: "ok",
-            players: (
-              .players | map({
-                name: .full_name,
-                position: .current_position,
-                score: .score,
-                thru: .thru
-              })
-            )
-          }' event.json > Leaderboard.json
 
       - name: Commit changes
         run: |
