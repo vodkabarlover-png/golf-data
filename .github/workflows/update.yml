@@ -18,11 +18,51 @@ jobs:
 
       - name: Fetch leaderboard safely (no jq)
         run: |
-          # Fetch raw data through AllOrigins
+          # Fetch event list through proxy
           curl -s "https://api.allorigins.win/raw?url=https://api.thescore.com/golf/pga/events" > events_raw.txt
 
-          # Always write a valid JSON file, even if API fails
-          echo '{ "status": "ok", "players": [] }' > Leaderboard.json
+          # Extract first event ID using grep + sed (jq-free)
+          event_id=$(grep -o '"id":[0-9]*' events_raw.txt | head -n 1 | sed 's/"id"://')
+
+          # If no ID found, write empty JSON and exit safely
+          if [ -z "$event_id" ]; then
+            echo '{ "status": "ok", "players": [] }' > Leaderboard.json
+            exit 0
+          fi
+
+          # Fetch event details
+          curl -s "https://api.allorigins.win/raw?url=https://api.thescore.com/golf/pga/events/$event_id" > event_raw.txt
+
+          # Start JSON output
+          echo '{ "status": "ok", "players": [' > Leaderboard.json
+
+          first=true
+
+          # Extract players using grep + sed
+          grep -o '{[^}]*"full_name"[^}]*}' event_raw.txt > players.txt || true
+
+          while IFS= read -r p; do
+            name=$(echo "$p" | grep -o '"full_name":"[^"]*"' | sed 's/"full_name":"//;s/"//')
+            pos=$(echo "$p" | grep -o '"current_position":"[^"]*"' | sed 's/"current_position":"//;s/"//')
+            score=$(echo "$p" | grep -o '"score":[^,}]*' | sed 's/"score"://')
+            thru=$(echo "$p" | grep -o '"thru":[^,}]*' | sed 's/"thru"://')
+
+            # Skip if name missing
+            if [ -z "$name" ]; then
+              continue
+            fi
+
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> Leaderboard.json
+            fi
+
+            echo "{ \"name\": \"$name\", \"position\": \"$pos\", \"score\": $score, \"thru\": $thru }" >> Leaderboard.json
+
+          done < players.txt
+
+          echo '] }' >> Leaderboard.json
 
       - name: Commit changes
         run: |
