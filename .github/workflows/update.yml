@@ -1,0 +1,28 @@
+name: Update Leaderboard
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch live leaderboard
+        run: |
+          curl -s https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard \
+          | jq '{ status: "ok", players: .events[0].competitions[0].competitors | map({ name: .athlete.displayName, position: .status.position.displayName, score: .score.value, thru: .status.period }) }' \
+          > Leaderboard.json
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add Leaderboard.json
+          git commit -m "Auto-update leaderboard" || echo "No changes"
+          git push
