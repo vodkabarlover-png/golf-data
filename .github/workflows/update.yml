@@ -19,21 +19,27 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch live leaderboard
+      - name: Fetch PGA leaderboard from TheScore
         run: |
-          curl -s "https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard" \
-          | jq '{
-              status: "ok",
-              players: (
-                .events[0].competitions[0].competitors
-                | map({
-                    name: .athlete.displayName,
-                    position: .status.position.displayName,
-                    score: .score.value,
-                    thru: .status.period
-                  })
-              )
-            }' > Leaderboard.json
+          curl -s "https://api.thescore.com/golf/pga/events" > events.json
+
+          # Get the first active event
+          event_id=$(jq -r '[.[] | select(.is_live == true)][0].id' events.json)
+
+          # Fetch leaderboard for that event
+          curl -s "https://api.thescore.com/golf/pga/events/$event_id" > event.json
+
+          jq '{
+            status: "ok",
+            players: (
+              .players | map({
+                name: .full_name,
+                position: .current_position,
+                score: .score,
+                thru: .thru
+              })
+            )
+          }' event.json > Leaderboard.json
 
       - name: Commit changes
         run: |
