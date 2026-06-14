@@ -19,20 +19,23 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Debug curl output
+      - name: Fetch PGA leaderboard through AllOrigins
         run: |
-          echo "=== CURL OUTPUT START ==="
-          curl -v https://api.thescore.com/golf/pga/events || true
-          echo "=== CURL OUTPUT END ==="
+          # Fetch event list through proxy
+          curl -s "https://api.allorigins.win/raw?url=https://api.thescore.com/golf/pga/events" > events.json
 
-      - name: Fetch PGA leaderboard from TheScore
-        run: |
-          curl -s "https://api.thescore.com/golf/pga/events" > events.json
-
+          # Extract the first live event ID
           event_id=$(jq -r '[.[] | select(.is_live == true)][0].id' events.json)
 
-          curl -s "https://api.thescore.com/golf/pga/events/$event_id" > event.json
+          # If no live event, fallback to first event
+          if [ "$event_id" = "null" ]; then
+            event_id=$(jq -r '.[0].id' events.json)
+          fi
 
+          # Fetch event details through proxy
+          curl -s "https://api.allorigins.win/raw?url=https://api.thescore.com/golf/pga/events/$event_id" > event.json
+
+          # Build leaderboard JSON
           jq '{
             status: "ok",
             players: (
