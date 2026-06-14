@@ -19,8 +19,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch PGA leaderboard from TheScore
-              - name: Debug curl output
+       - name: Debug curl output
         run: |
           echo "=== CURL OUTPUT START ==="
           curl -v https://api.thescore.com/golf/pga/events || true
