@@ -28,19 +28,33 @@ jobs:
         run: |
           echo '{ "status": "ok", "players": [' > Leaderboard.json
 
-          # Loop through each competitor reference
-          for url in $(jq -r '.items[].$ref' competitors.json); do
-            data=$(curl -s "$url")
+          first=true
 
-            name=$(echo "$data" | jq -r '.athlete.displayName')
-            position=$(echo "$data" | jq -r '.status.position.displayName')
-            score=$(echo "$data" | jq -r '.score.value')
-            thru=$(echo "$data" | jq -r '.status.period')
+          for comp in $(jq -r '.items[].$ref' competitors.json); do
+            comp_json=$(curl -s "$comp")
 
-            echo "{ \"name\": \"$name\", \"position\": \"$position\", \"score\": $score, \"thru\": $thru }," >> Leaderboard.json
+            athlete_url=$(echo "$comp_json" | jq -r '.athlete.$ref')
+            status_url=$(echo "$comp_json" | jq -r '.status.$ref')
+            score_url=$(echo "$comp_json" | jq -r '.score.$ref')
+
+            athlete=$(curl -s "$athlete_url")
+            status=$(curl -s "$status_url")
+            score=$(curl -s "$score_url")
+
+            name=$(echo "$athlete" | jq -r '.displayName')
+            position=$(echo "$status" | jq -r '.position.displayName')
+            thru=$(echo "$status" | jq -r '.period')
+            score_val=$(echo "$score" | jq -r '.value')
+
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> Leaderboard.json
+            fi
+
+            echo "{ \"name\": \"$name\", \"position\": \"$position\", \"score\": $score_val, \"thru\": $thru }" >> Leaderboard.json
           done
 
-          # Close JSON array
           echo '] }' >> Leaderboard.json
 
       - name: Commit changes
