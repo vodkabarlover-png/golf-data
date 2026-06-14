@@ -27,12 +27,13 @@ jobs:
       - name: Build leaderboard
         run: |
           echo '{ "status": "ok", "players": [' > Leaderboard.json
-
           first=true
 
+          # Loop through competitor references
           for comp in $(jq -r '.items[].$ref' competitors.json); do
             comp_json=$(curl -s "$comp")
 
+            # Follow nested references
             athlete_url=$(echo "$comp_json" | jq -r '.athlete.$ref')
             status_url=$(echo "$comp_json" | jq -r '.status.$ref')
             score_url=$(echo "$comp_json" | jq -r '.score.$ref')
@@ -45,6 +46,11 @@ jobs:
             position=$(echo "$status" | jq -r '.position.displayName')
             thru=$(echo "$status" | jq -r '.period')
             score_val=$(echo "$score" | jq -r '.value')
+
+            # Skip invalid entries
+            if [ "$name" = "null" ]; then
+              continue
+            fi
 
             if [ "$first" = true ]; then
               first=false
