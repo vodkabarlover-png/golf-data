@@ -23,10 +23,8 @@ jobs:
         run: |
           curl -s "https://api.thescore.com/golf/pga/events" > events.json
 
-          # Get the first active event
           event_id=$(jq -r '[.[] | select(.is_live == true)][0].id' events.json)
 
-          # Fetch leaderboard for that event
           curl -s "https://api.thescore.com/golf/pga/events/$event_id" > event.json
 
           jq '{
