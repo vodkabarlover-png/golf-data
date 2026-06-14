@@ -13,6 +13,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Fetch live leaderboard
         run: |
           curl -s https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard \
