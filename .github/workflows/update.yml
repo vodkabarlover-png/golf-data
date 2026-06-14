@@ -19,21 +19,29 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch live leaderboard
+      - name: Fetch competitor list
         run: |
-          curl -s "https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard" \
-          | jq '{
-              status: "ok",
-              players: (
-                .events[0].competitions[0].competitors // [] 
-                | map({
-                    name: (.athlete.displayName // "Unknown"),
-                    position: (.status.position.displayName // "-"),
-                    score: (.score.value // 0),
-                    thru: (.status.period // 0)
-                  })
-              )
-            }' > Leaderboard.json
+          curl -s "https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/401811951/competitions/401811951/competitors" \
+          > competitors.json
+
+      - name: Build leaderboard
+        run: |
+          echo '{ "status": "ok", "players": [' > Leaderboard.json
+
+          # Loop through each competitor reference
+          for url in $(jq -r '.items[].$ref' competitors.json); do
+            data=$(curl -s "$url")
+
+            name=$(echo "$data" | jq -r '.athlete.displayName')
+            position=$(echo "$data" | jq -r '.status.position.displayName')
+            score=$(echo "$data" | jq -r '.score.value')
+            thru=$(echo "$data" | jq -r '.status.period')
+
+            echo "{ \"name\": \"$name\", \"position\": \"$position\", \"score\": $score, \"thru\": $thru }," >> Leaderboard.json
+          done
+
+          # Close JSON array
+          echo '] }' >> Leaderboard.json
 
       - name: Commit changes
         run: |
