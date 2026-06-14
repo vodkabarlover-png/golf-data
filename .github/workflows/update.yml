@@ -16,20 +16,8 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-       - name: Debug curl output
+      - name: Debug curl output
         run: |
           echo "=== CURL OUTPUT START ==="
           curl -v https://api.thescore.com/golf/pga/events || true
           echo "=== CURL OUTPUT END ==="
-
-
-      - name: Commit changes
-        run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git add Leaderboard.json
-          git commit -m "Auto-update leaderboard" || echo "No changes"
-          git push
