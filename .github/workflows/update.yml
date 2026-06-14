@@ -19,49 +19,21 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch competitor list
+      - name: Fetch live leaderboard
         run: |
-          curl -s "https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/401811951/competitions/401811951/competitors" \
-          > competitors.json
-
-      - name: Build leaderboard
-        run: |
-          echo '{ "status": "ok", "players": [' > Leaderboard.json
-          first=true
-
-          # Loop through competitor references
-          for comp in $(jq -r '.items[].$ref' competitors.json); do
-            comp_json=$(curl -s "$comp")
-
-            # Follow nested references
-            athlete_url=$(echo "$comp_json" | jq -r '.athlete.$ref')
-            status_url=$(echo "$comp_json" | jq -r '.status.$ref')
-            score_url=$(echo "$comp_json" | jq -r '.score.$ref')
-
-            athlete=$(curl -s "$athlete_url")
-            status=$(curl -s "$status_url")
-            score=$(curl -s "$score_url")
-
-            name=$(echo "$athlete" | jq -r '.displayName')
-            position=$(echo "$status" | jq -r '.position.displayName')
-            thru=$(echo "$status" | jq -r '.period')
-            score_val=$(echo "$score" | jq -r '.value')
-
-            # Skip invalid entries
-            if [ "$name" = "null" ]; then
-              continue
-            fi
-
-            if [ "$first" = true ]; then
-              first=false
-            else
-              echo "," >> Leaderboard.json
-            fi
-
-            echo "{ \"name\": \"$name\", \"position\": \"$position\", \"score\": $score_val, \"thru\": $thru }" >> Leaderboard.json
-          done
-
-          echo '] }' >> Leaderboard.json
+          curl -s "https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard" \
+          | jq '{
+              status: "ok",
+              players: (
+                .events[0].competitions[0].competitors
+                | map({
+                    name: .athlete.displayName,
+                    position: .status.position.displayName,
+                    score: .score.value,
+                    thru: .status.period
+                  })
+              )
+            }' > Leaderboard.json
 
       - name: Commit changes
         run: |
