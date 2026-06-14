@@ -1,17 +1,4 @@
 {
   "status": "ok",
-  "players": [
-    {
-      "name": "Scottie Scheffler",
-      "position": 1,
-      "score": -12,
-      "thru": 18
-    },
-    {
-      "name": "Rory McIlroy",
-      "position": 2,
-      "score": -10,
-      "thru": 18
-    }
-  ]
+  "players": []
 }
